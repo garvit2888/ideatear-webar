@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR Viewer - IdeateAR</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    body, html {
+      margin: 0; padding: 0; height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #121212; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    model-viewer {
+      width: 100vw;
+      height: 80vh;
+      background: #222;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #0ff;
+    }
+    #arButton {
+      margin-top: 20px;
+      padding: 18px 36px;
+      font-size: 22px;
+      font-weight: 600;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,255,255,0.6);
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #arButton:hover {
+      background: #06c;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(0,102,204,0.8);
+    }
+    #arButton:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+
+  <model-viewer
+    id="modelViewer"
+    ar
+    ar-modes="scene-viewer quick-look webxr"
+    camera-controls
+    auto-rotate
+    exposure="1"
+    shadow-intensity="1"
+  ></model-viewer>
+
+  <button id="arButton" style="display:none;">View in AR</button>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const glb = params.get('glb');
+    const usdz = params.get('usdz');
+    const modelViewer = document.getElementById('modelViewer');
+    const arButton = document.getElementById('arButton');
+
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    function isAndroid() {
+      return /Android/.test(navigator.userAgent);
+    }
+
+    // Set sources
+    if (glb && glb !== 'null') {
+      modelViewer.src = glb;
+    }
+    if (usdz && usdz !== 'null') {
+      modelViewer.iosSrc = usdz;
+    }
+
+    window.addEventListener('load', () => {
+      if (isIOS()) {
+        // Show the AR button for iOS users
+        arButton.style.display = 'inline-block';
+        arButton.onclick = () => {
+          // Open Quick Look when user clicks
+          // Using hidden link with rel=ar
+          const a = document.createElement('a');
+          a.setAttribute('href', usdz);
+          a.setAttribute('rel', 'ar');
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        };
+      } else if (isAndroid()) {
+        // For Android, auto-launch AR experience immediately
+        modelViewer.enterAR();
+      } else {
+        // For desktop or unsupported devices, just show model
+        modelViewer.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
