@@ -7,65 +7,37 @@
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body, html {
-      margin: 0; 
-      padding: 0; 
-      height: 100vh; 
-      width: 100vw;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #121212; 
-      color: #fff; 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      justify-content: center;
+      margin: 0; padding: 0; height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #121212; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-
     model-viewer {
       width: 100vw;
       height: 80vh;
       background: #222;
       border-radius: 12px;
-      box-shadow: 0 0 20px #ff4500;
+      box-shadow: 0 0 20px #0ff;
     }
-
     #arButton {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      margin-top: 20px;
       padding: 18px 36px;
       font-size: 22px;
       font-weight: 600;
-      background: #ff6600;
-      color: #fff;
+      background: #0ff;
+      color: #000;
       border: none;
       border-radius: 30px;
       cursor: pointer;
-      box-shadow: 0 0 15px rgba(255, 100, 0, 0.8);
-      transition: transform 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0,255,255,0.6);
+      transition: background-color 0.3s ease;
       user-select: none;
-      z-index: 10;
     }
-
     #arButton:hover {
-      animation: glowPulse 1.4s infinite ease-in-out;
-      background: #ff3300;
+      background: #06c;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(0,102,204,0.8);
     }
-
     #arButton:active {
       transform: scale(0.95);
-    }
-
-    @keyframes glowPulse {
-      0% {
-        box-shadow: 0 0 10px rgba(255, 100, 0, 0.6), 0 0 20px rgba(255, 100, 0, 0.4);
-      }
-      50% {
-        box-shadow: 0 0 25px rgba(255, 140, 0, 1), 0 0 40px rgba(255, 80, 0, 0.9);
-      }
-      100% {
-        box-shadow: 0 0 10px rgba(255, 100, 0, 0.6), 0 0 20px rgba(255, 100, 0, 0.4);
-      }
     }
   </style>
 </head>
@@ -97,6 +69,7 @@
       return /Android/.test(navigator.userAgent);
     }
 
+    // Set sources
     if (glb && glb !== 'null') {
       modelViewer.src = glb;
     }
@@ -106,8 +79,11 @@
 
     window.addEventListener('load', () => {
       if (isIOS()) {
+        // Show the AR button for iOS users
         arButton.style.display = 'inline-block';
         arButton.onclick = () => {
+          // Open Quick Look when user clicks
+          // Using hidden link with rel=ar
           const a = document.createElement('a');
           a.setAttribute('href', usdz);
           a.setAttribute('rel', 'ar');
@@ -117,12 +93,13 @@
           a.remove();
         };
       } else if (isAndroid()) {
+        // For Android, auto-launch AR experience immediately
         modelViewer.enterAR();
       } else {
+        // For desktop or unsupported devices, just show model
         modelViewer.style.display = 'block';
       }
     });
   </script>
 </body>
 </html>
-
