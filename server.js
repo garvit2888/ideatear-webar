@@ -1,71 +1,65 @@
 const express = require('express');
-const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const cors = require('cors');
 const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable CORS
+// Define correct MIME types for .usdz and .glb
+express.static.mime.define({
+  'model/vnd.usdz+zip': ['usdz'],
+  'model/gltf-binary': ['glb']
+});
+
+// Middleware
 app.use(cors());
+app.use(express.static('public'));
+app.use('/uploads', express.static('uploads'));
 
-// Set up storage engine for multer
+// File upload configuration
+const allowedExtensions = ['.glb', '.usdz'];
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
+  destination: 'uploads/',
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    if (!allowedExtensions.includes(ext)) {
+      return cb(new Error('Only .glb and .usdz files allowed'));
+    }
+    cb(null, Date.now() + ext);
   }
 });
+const upload = multer({ storage });
 
-const upload = multer({ storage: storage });
-
-// Serve static files from public and uploads folders
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Correct MIME types manually for 3D model files (especially .glb and .usdz)
-app.get('/uploads/:filename', (req, res) => {
-  const filePath = path.join(__dirname, 'uploads', req.params.filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send('File not found');
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  let contentType = 'application/octet-stream';
-
-  if (ext === '.glb') {
-    contentType = 'model/gltf-binary';
-  } else if (ext === '.gltf') {
-    contentType = 'model/gltf+json';
-  } else if (ext === '.usdz') {
-    contentType = 'model/vnd.usdz+zip';
-  }
-
-  res.setHeader('Content-Type', contentType);
-  res.sendFile(filePath);
-});
-
-// File upload route
+// File upload endpoint
 app.post('/upload', upload.fields([{ name: 'glb' }, { name: 'usdz' }]), (req, res) => {
-  const glbFile = req.files['glb'] ? req.files['glb'][0].filename : null;
-  const usdzFile = req.files['usdz'] ? req.files['usdz'][0].filename : null;
+  let glbFile = req.files.glb ? req.files.glb[0].filename : null;
+  let usdzFile = req.files.usdz ? req.files.usdz[0].filename : null;
 
-  const response = {
-    glbUrl: glbFile ? `/uploads/${glbFile}` : null,
-    usdzUrl: usdzFile ? `/uploads/${usdzFile}` : null,
-    viewUrl: `/viewer.html?glb=${glbFile ? `/uploads/${glbFile}` : 'null'}&usdz=${usdzFile ? `/uploads/${usdzFile}` : 'null'}`
-  };
+  // If only one format is uploaded, duplicate it with the other extension
+  if (glbFile && !usdzFile) {
+    const newUSDZFile = glbFile.replace('.glb', '.usdz');
+    fs.copyFileSync(`uploads/${glbFile}`, `uploads/${newUSDZFile}`);
+    usdzFile = newUSDZFile;
+  } else if (usdzFile && !glbFile) {
+    const newGLBFile = usdzFile.replace('.usdz', '.glb');
+    fs.copyFileSync(`uploads/${usdzFile}`, `uploads/${newGLBFile}`);
+    glbFile = newGLBFile;
+  }
 
-  res.json(response);
+  const glbUrl = glbFile ? `/uploads/${glbFile}` : null;
+  const usdzUrl = usdzFile ? `/uploads/${usdzFile}` : null;
+  const viewerLink = `/viewer.html?glb=${glbUrl}&usdz=${usdzUrl}`;
+
+  res.send(`Your AR viewer link: <a href="${viewerLink}" target="_blank">${viewerLink}</a>`);
+});
+
+// Default homepage route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
 
