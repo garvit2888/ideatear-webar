@@ -1,133 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR Viewer - IdeateAR</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>
-    :root {
-      --fire-orange: #ff6f00;
-      --fire-glow: rgba(255, 111, 0, 0.6);
-    }
+  <meta charset="UTF-8">
+  <title>View in AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- iOS Quick Look AR -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
 
-    body, html {
+  <style>
+    body {
       margin: 0;
-      padding: 0;
-      height: 100vh;
-      background: #121212;
+      background-color: #0e0e0e;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      color: white;
+      height: 100vh;
+      flex-direction: column;
     }
 
-    model-viewer {
-      width: 100vw;
-      height: 80vh;
-      background: #1a1a1a;
-      border-radius: 12px;
-      box-shadow: 0 0 20px var(--fire-orange);
-    }
-
-    #arButton {
-      margin-top: 20px;
-      padding: 18px 40px;
-      font-size: 24px;
-      font-weight: bold;
-      color: black;
-      background: var(--fire-orange);
+    .ar-button {
+      background: #ff4500;
       border: none;
-      border-radius: 40px;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #fff;
       cursor: pointer;
-      box-shadow: 0 0 20px var(--fire-glow), 0 0 40px var(--fire-glow);
-      animation: pulse 2s infinite ease-in-out;
+      box-shadow: 0 0 15px #ff4500;
+      text-decoration: none;
       transition: all 0.3s ease-in-out;
+      margin: 10px;
     }
 
-    #arButton:hover {
-      background: #ff3d00;
-      color: white;
-      box-shadow: 0 0 30px rgba(255, 61, 0, 0.7), 0 0 50px rgba(255, 61, 0, 0.9);
+    .ar-button:hover {
+      box-shadow: 0 0 30px #ff4500, 0 0 50px #ff4500;
       transform: scale(1.05);
     }
 
-    #arButton:active {
-      transform: scale(0.95);
-    }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 15px var(--fire-glow), 0 0 30px var(--fire-glow); }
-      50% { box-shadow: 0 0 30px var(--fire-glow), 0 0 60px var(--fire-glow); }
-      100% { box-shadow: 0 0 15px var(--fire-glow), 0 0 30px var(--fire-glow); }
+    #buttons-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
   </style>
 </head>
 <body>
 
-  <model-viewer
-    id="modelViewer"
-    ar
-    ar-modes="scene-viewer quick-look webxr"
-    camera-controls
-    auto-rotate
-    exposure="1"
-    shadow-intensity="1"
-  ></model-viewer>
-
-  <button id="arButton" style="display: none;">View in AR</button>
+  <div id="buttons-container">
+    <!-- Buttons will be injected by script -->
+  </div>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const glb = params.get('glb');
-    const usdz = params.get('usdz');
-    const modelViewer = document.getElementById('modelViewer');
-    const arButton = document.getElementById('arButton');
+    const urlParams = new URLSearchParams(window.location.search);
+    const glb = urlParams.get('glb');
+    const usdz = urlParams.get('usdz');
 
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const container = document.getElementById('buttons-container');
+
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && usdz) {
+      // iOS Quick Look button
+      const a = document.createElement('a');
+      a.href = usdz;
+      a.rel = 'ar';
+      a.className = 'ar-button';
+      a.innerText = '👀 View in AR (iOS)';
+      const img = document.createElement('img');
+      img.src = usdz;
+      img.alt = 'AR Model';
+      img.style.display = 'none';
+      a.appendChild(img);
+      container.appendChild(a);
+    } else if (/Android/i.test(navigator.userAgent) && glb) {
+      // Android Scene Viewer button
+      const sceneViewerUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${location.origin}${glb}&mode=ar_only&resizable=true&title=AR+Model#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${location.origin}${glb};end;`;
+
+      const button = document.createElement('button');
+      button.innerText = '👀 View in AR (Android)';
+      button.className = 'ar-button';
+      button.onclick = () => {
+        window.location.href = sceneViewerUrl;
+      };
+      container.appendChild(button);
+    } else {
+      const p = document.createElement('p');
+      p.innerText = 'AR is only supported on iOS or Android devices.';
+      container.appendChild(p);
     }
-
-    function isAndroid() {
-      return /Android/.test(navigator.userAgent);
-    }
-
-    if (glb && glb !== 'null') {
-      modelViewer.src = glb;
-    }
-
-    if (usdz && usdz !== 'null') {
-      modelViewer.iosSrc = usdz;
-    }
-
-    window.addEventListener('load', () => {
-      if (isIOS()) {
-        arButton.style.display = 'inline-block';
-        arButton.onclick = () => {
-          const a = document.createElement('a');
-          a.setAttribute('href', usdz);
-          a.setAttribute('rel', 'ar');
-          a.style.display = 'none';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        };
-      } else if (isAndroid()) {
-        arButton.style.display = 'inline-block';
-        arButton.onclick = () => {
-          modelViewer.enterAR().catch(err => {
-            alert("AR not supported or model failed to load.");
-            console.error(err);
-          });
-        };
-      } else {
-        // Desktop fallback (show model only)
-        modelViewer.style.display = 'block';
-      }
-    });
   </script>
+
 </body>
 </html>
+
 
